@@ -177,7 +177,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 ## Contact
 
-Your Name - [@0xAdilc](https://twitter.com/0xAdilc) - contact@adilc.me
+Adil Choudhury - [@0xAdilc](https://twitter.com/0xAdilc) - contact@adilc.me
 
 Project Link: [https://github.com/achoudhury4927/foundry-adil-stablecoin](https://github.com/achoudhury4927/foundry-adil-stablecoin)
 
