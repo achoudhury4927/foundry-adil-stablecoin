@@ -2,6 +2,7 @@
 
 pragma solidity 0.8.21;
 
+import {Script} from "forge-std/Script.sol";
 import {DecentralisedStableCoin} from "../src/DecentralisedStableCoin.sol";
 
 /**
@@ -10,6 +11,11 @@ import {DecentralisedStableCoin} from "../src/DecentralisedStableCoin.sol";
  *
  * This contract will deploy ASC token contract DecentralisedStableCoin
  */
-contract DeployDecentralisedStableCoin {
-    DecentralisedStableCoin ascContract;
+contract DeployDecentralisedStableCoin is Script {
+    function run() public returns (DecentralisedStableCoin) {
+        vm.startBroadcast();
+        DecentralisedStableCoin ascContract = new DecentralisedStableCoin();
+        vm.stopBroadcast();
+        return ascContract;
+    }
 }
