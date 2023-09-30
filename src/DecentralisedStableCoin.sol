@@ -39,7 +39,9 @@ contract DecentralisedStableCoin is ERC20Burnable, Ownable {
         uint256 _amount
     ) external onlyOwner returns (bool) {
         //Question: Is this required? Line 252 in ERC20.sol has this same require
-        //TODO: Test with this code commented out and check behaviour
+        //Answer: Not Required for error checking,
+        //        Transaction reverts with "ERC20: mint to the zero address" error thrown
+        //        Will keep as it helps being verbose for other developers
         if (_to == address(0)) {
             revert DecentralisedStableCoin__NotZeroAddress();
         }
