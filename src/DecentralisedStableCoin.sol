@@ -4,6 +4,7 @@ pragma solidity 0.8.21;
 
 import {ERC20Burnable, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import "forge-std/console2.sol";
 
 /**
  * @title DecentralisedStableCoin
@@ -23,11 +24,12 @@ contract DecentralisedStableCoin is ERC20Burnable, Ownable {
 
     function burn(uint256 _amount) public override onlyOwner {
         uint256 balance = balanceOf(msg.sender);
-        if (_amount < 0) {
+        console2.log(msg.sender);
+        if (_amount <= 0) {
             revert DecentralisedStableCoin__AmountMustBeMoreThanZero();
         }
         //Question: Is this required? Line 283 in ERC20.sol has this same require
-        //TODO: Test with this code commented out and check behaviour
+        //Answer: Not Required for error checking, check mint comments
         if (balance < _amount) {
             revert DecentralisedStableCoin__BurnAmountExceedsBalance();
         }
