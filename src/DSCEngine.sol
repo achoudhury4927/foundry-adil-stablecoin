@@ -22,9 +22,44 @@ import {IDSCEngine} from "./IDSCEngine.sol";
  * @notice This contract is loosely based on the MakerDAO DSS (DAI) system.
  */
 contract DSCEngine is IDSCEngine {
+    error DSCEngine_AmountNeedsToBeMoreThanZero();
+    error DSCEngine_TokenAddressesAndPriceFeedAddressesMustBeTheSameLength();
+
+    mapping(address token => address priceFeed) private s_priceFeeds;
+
+    modifier moreThanZero(uint256 amount) {
+        if (amount == 0) {
+            revert DSCEngine_AmountNeedsToBeMoreThanZero();
+        }
+        _;
+    }
+
+    /**Base Goerli Chainlink Pricefeeds:
+     * BTC/USD - 0xAC15714c08986DACC0379193e22382736796496f
+     * ETH/USD - 0xcD2A119bD1F7DF95d706DE6F2057fDD45A0503E2
+     */
+    constructor(
+        address[] memory tokenAddress,
+        address[] memory priceFeedAddress,
+        address decentralisedStableCoinAddress
+    ) {
+        if (tokenAddress.length != priceFeedAddress.length) {
+            revert DSCEngine_TokenAddressesAndPriceFeedAddressesMustBeTheSameLength();
+        }
+        //Question - What are the implications of tokenAddress and priceFeedAddress not being correct
+        //         - What if theyre malicious contracts? Can they be malicious if using Chainlink?
+    }
+
     function depositCollateralAndMintAsc() external {}
 
-    function depositCollateral() external {}
+    /**
+     * @param tokenCollateralAddress The address of the token to deposit as collateral
+     * @param amountCollateral The amount of collateral to deposit
+     */
+    function depositCollateral(
+        address tokenCollateralAddress,
+        uint256 amountCollateral
+    ) external moreThanZero(amountCollateral) {}
 
     function redeemCollateralForAsc() external {}
 
