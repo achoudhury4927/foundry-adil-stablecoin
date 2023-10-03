@@ -4,7 +4,6 @@ pragma solidity 0.8.21;
 
 import {ERC20Burnable, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import "forge-std/console2.sol";
 
 /**
  * @title DecentralisedStableCoin
@@ -24,7 +23,6 @@ contract DecentralisedStableCoin is ERC20Burnable, Ownable {
 
     function burn(uint256 _amount) public override onlyOwner {
         uint256 balance = balanceOf(msg.sender);
-        console2.log(msg.sender);
         if (_amount <= 0) {
             revert DecentralisedStableCoin__AmountMustBeMoreThanZero();
         }
@@ -36,10 +34,7 @@ contract DecentralisedStableCoin is ERC20Burnable, Ownable {
         super.burn(_amount);
     }
 
-    function mint(
-        address _to,
-        uint256 _amount
-    ) external onlyOwner returns (bool) {
+    function mint(address _to, uint256 _amount) external onlyOwner returns (bool) {
         //Question: Is this required? Line 252 in ERC20.sol has this same require
         //Answer: Not Required for error checking,
         //        Transaction reverts with "ERC20: mint to the zero address" error thrown
