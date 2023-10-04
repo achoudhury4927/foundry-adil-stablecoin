@@ -5,7 +5,7 @@ pragma solidity 0.8.21;
 import {IDSCEngine} from "./IDSCEngine.sol";
 import {DecentralisedStableCoin} from "./DecentralisedStableCoin.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 /**
  * @title DSCEngine
  * @author Adil Choudhury
@@ -18,20 +18,23 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
  *
  * Think DAI without the governance, fees and was only backed by WETH AND WBTC
  *
- * Our DSC system should always be overcollateralised. At no point should the value of all backed ASC be greater than the value of all collateral.
+ * Our DSC system should always be overcollateralised. At no point should the value of all backed Dsc be greater than the value of all collateral.
  *
- * @notice This contract is the core of the DSC System. It handles all the logic for minting and redeeming ASC, as well as depositing and withdrawing collateral
+ * @notice This contract is the core of the DSC System. It handles all the logic for minting and redeeming Dsc, as well as depositing and withdrawing collateral
  * @notice This contract is loosely based on the MakerDAO DSS (DAI) system.
  */
+
 contract DSCEngine is IDSCEngine, ReentrancyGuard {
     error DSCEngine_AmountNeedsToBeMoreThanZero();
     error DSCEngine_TokenAddressesAndPriceFeedAddressesMustBeTheSameLength();
     error DSCEngine_NotAllowedToken();
+    error DSCEngine_TransferFailed();
 
     mapping(address token => address priceFeed) private s_priceFeeds;
     mapping(address user => mapping(address token => uint256 amount)) private s_collateralDeposited;
+    mapping(address user => uint256 amountDscMinted) private s_DscMinted;
 
-    DecentralisedStableCoin private immutable i_asc;
+    DecentralisedStableCoin private immutable i_Dsc;
 
     event CollateralDeposited(address indexed user, address indexed token, uint256 indexed amount);
 
@@ -68,10 +71,10 @@ contract DSCEngine is IDSCEngine, ReentrancyGuard {
             s_priceFeeds[tokenAddress[i]] = priceFeedAddress[i];
         }
 
-        i_asc = DecentralisedStableCoin(decentralisedStableCoinAddress);
+        i_Dsc = DecentralisedStableCoin(decentralisedStableCoinAddress);
     }
 
-    function depositCollateralAndMintAsc() external {}
+    function depositCollateralAndMintDsc() external {}
 
     /**
      * @param tokenCollateralAddress The address of the token to deposit as collateral
@@ -85,17 +88,49 @@ contract DSCEngine is IDSCEngine, ReentrancyGuard {
     {
         s_collateralDeposited[msg.sender][tokenCollateralAddress] += amountCollateral;
         emit CollateralDeposited(msg.sender, tokenCollateralAddress, amountCollateral);
+
+        bool success = IERC20(tokenCollateralAddress).transferFrom(msg.sender, address(this), amountCollateral);
+        if (!success) {
+            revert DSCEngine_TransferFailed();
+        }
     }
 
-    function redeemCollateralForAsc() external {}
+    function redeemCollateralForDsc() external {}
 
     function redeemCollateral() external {}
 
-    function mintDsc() external {}
+    /**
+     * @param amountDscToMint The amount of Dsc to mint
+     */
+    function mintDsc(uint256 amountDscToMint) external moreThanZero(amountDscToMint) nonReentrant {
+        s_DscMinted[msg.sender] += amountDscToMint;
+        _revertIfHealthFactorIsBroken(msg.sender);
+    }
 
-    function burnAsc() external {}
+    function burnDsc() external {}
 
     function liquidate() external {}
 
     function getHealthFactor() external view {}
+
+    function _getAccountInformation(address user)
+        private
+        view
+        returns (uint256 totalDscMinted, uint256 collateralValueInUsd)
+    {
+        totalDscMinted = s_DscMinted[user];
+        collateralValueInUsd = getAccountCollateralValue(user);
+    }
+
+    /**
+     * Returns how close to liquidation a user is. If healthfactor <1 they can get liquidated
+     * @param user address to check health factor of
+     */
+    function _healthFactor(address user) private view returns (uint256) {
+        (uint256 totalDscMinted, uint256 collateralValueInUsd) = _getAccountInformation(user);
+    }
+
+    function _revertIfHealthFactorIsBroken(address user) internal view {}
+
+    function getAccountCollateralValue(address user) public view returns (uint256) {}
 }
