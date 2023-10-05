@@ -6,6 +6,7 @@ import {IDSCEngine} from "./IDSCEngine.sol";
 import {DecentralisedStableCoin} from "./DecentralisedStableCoin.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 /**
  * @title DSCEngine
  * @author Adil Choudhury
@@ -30,9 +31,12 @@ contract DSCEngine is IDSCEngine, ReentrancyGuard {
     error DSCEngine_NotAllowedToken();
     error DSCEngine_TransferFailed();
 
+    uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10;
+    uint256 private constant PRECISION = 1e18;
     mapping(address token => address priceFeed) private s_priceFeeds;
     mapping(address user => mapping(address token => uint256 amount)) private s_collateralDeposited;
     mapping(address user => uint256 amountDscMinted) private s_DscMinted;
+    address[] private s_collateralTokens;
 
     DecentralisedStableCoin private immutable i_Dsc;
 
@@ -69,6 +73,7 @@ contract DSCEngine is IDSCEngine, ReentrancyGuard {
         //         - What if theyre malicious contracts? Can they be malicious if using Chainlink?
         for (uint256 i = 0; i < tokenAddress.length; i++) {
             s_priceFeeds[tokenAddress[i]] = priceFeedAddress[i];
+            s_collateralTokens.push(tokenAddress[i]);
         }
 
         i_Dsc = DecentralisedStableCoin(decentralisedStableCoinAddress);
@@ -132,5 +137,22 @@ contract DSCEngine is IDSCEngine, ReentrancyGuard {
 
     function _revertIfHealthFactorIsBroken(address user) internal view {}
 
-    function getAccountCollateralValue(address user) public view returns (uint256) {}
+    function getAccountCollateralValue(address user) public view returns (uint256) {
+        uint256 totalCollateralValueInUsd;
+        for (uint256 i = 0; i < s_collateralTokens.length; i++) {
+            address token = s_collateralTokens[i];
+            uint256 amount = s_collateralDeposited[user][token];
+            totalCollateralValueInUsd += getUsdValue(token, amount);
+        }
+        return totalCollateralValueInUsd;
+    }
+
+    function getUsdValue(address token, uint256 amount) public view returns (uint256) {
+        AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
+        (, int256 price,,,) = priceFeed.latestRoundData(); //Price is returned in 1e8 needs to be multiplied by 1e10 to get into same base as wei which is 1e18
+        //If 1 ETH = $1000
+        //Price will be 1000 * 1e8
+        //To get the wei amount (1 ETH = 1 * 1e18)
+        return ((uint256(price) * ADDITIONAL_FEED_PRECISION) * amount) / PRECISION; //Price in 1e18 multiplied by amount, to get 1e18 total, divided by 1e18 to get a dollar amount.
+    }
 }
