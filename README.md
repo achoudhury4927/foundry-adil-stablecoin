@@ -153,10 +153,26 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 
 ## Roadmap
 
-- [ ] Feature 1
-- [ ] Feature 2
-- [ ] Feature 3
-  - [ ] Nested Feature
+- [x] ERC20 Stablecoin
+  - [x] Unit Tests
+  - [ ] Integration Tests
+- [ ] Deposit Collateral
+  - [ ] Unit Tests
+  - [ ] Integration Tests
+- [ ] Chainlink Oracle Pricefeeds
+  - [ ] Unit Tests
+  - [ ] Integration Tests
+- [ ] Mint
+  - [ ] Unit Tests
+  - [ ] Integration Tests
+- [ ] Burn
+  - [ ] Unit Tests
+  - [ ] Integration Tests
+- [ ] Liquidations
+  - [ ] Unit Tests
+  - [ ] Integration Tests
+- [ ] Deploy Engine Script
+- [ ] Deploy to Base L2
 
 See the [open issues](https://github.com/achoudhury4927/foundry-adil-stablecoin/issues) for a full list of proposed features (and known issues).
 
