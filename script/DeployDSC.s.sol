@@ -14,24 +14,20 @@ import {DSCEngine} from "../src/DSCEngine.sol";
  * This contract will deploy ASC token contract DecentralisedStableCoin
  */
 contract DeployDSC is Script {
-    HelperConfig helperConfig = new HelperConfig();
+    address[] tokenAddress;
+    address[] priceFeeds;
 
     function run() public returns (DecentralisedStableCoin, DSCEngine) {
-        vm.startBroadcast();
+        HelperConfig helperConfig = new HelperConfig();
+        (address wethUsdPriceFeed, address wbtcUsdPriceFeed, address weth, address wbtc, uint256 deployerKey) =
+            helperConfig.activeNetworkConfig();
+        tokenAddress = [weth, wbtc];
+        priceFeeds = [wethUsdPriceFeed, wbtcUsdPriceFeed];
+        vm.startBroadcast(deployerKey);
         DecentralisedStableCoin dsc = new DecentralisedStableCoin();
-        (address[] memory tokenAddress, address[] memory priceFeeds) = destructureSeploiaNetworkConfig();
-        DSCEngine dscEngine = new DSCEngine(tokenAddress, priceFeeds,address(dsc));
+        DSCEngine dscEngine = new DSCEngine(tokenAddress, priceFeeds, address(dsc));
+        dsc.transferOwnership(address(dscEngine));
         vm.stopBroadcast();
         return (dsc, dscEngine);
-    }
-
-    function destructureSeploiaNetworkConfig()
-        public
-        returns (address[] memory tokenAddress, address[] memory priceFeeds)
-    {
-        tokenAddress[0] = helperConfig.getSepoliaNetworkConfig().wbtc;
-        tokenAddress[1] = helperConfig.getSepoliaNetworkConfig().weth;
-        priceFeeds[0] = helperConfig.getSepoliaNetworkConfig().wbtcUsdPriceFeed;
-        priceFeeds[1] = helperConfig.getSepoliaNetworkConfig().wethUsdPriceFeed;
     }
 }
