@@ -3,6 +3,7 @@
 pragma solidity 0.8.21;
 
 import {IDSCEngine} from "./IDSCEngine.sol";
+import {ITestDSCEngine} from "../test/interface/ITestDSCEngine.t.sol";
 import {DecentralisedStableCoin} from "./DecentralisedStableCoin.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -25,7 +26,7 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/Ag
  * @notice This contract is loosely based on the MakerDAO DSS (DAI) system.
  */
 
-contract DSCEngine is IDSCEngine, ReentrancyGuard {
+contract DSCEngine is IDSCEngine, ReentrancyGuard, ITestDSCEngine {
     error DSCEngine_AmountNeedsToBeMoreThanZero();
     error DSCEngine_TokenAddressesAndPriceFeedAddressesMustBeTheSameLength();
     error DSCEngine_NotAllowedToken();
@@ -126,6 +127,15 @@ contract DSCEngine is IDSCEngine, ReentrancyGuard {
     function liquidate() external {}
 
     function getHealthFactor() external view {}
+
+    /*================= TEST FUNCTION FROM ITestDSCEngine REMOVE BEFORE DEPLOY =================*/
+    function getFromCollateralDepositedMapping(address userAddress, address tokenCollateralAddress)
+        external
+        view
+        returns (uint256)
+    {
+        return s_collateralDeposited[userAddress][tokenCollateralAddress];
+    }
 
     function _getAccountInformation(address user)
         private
