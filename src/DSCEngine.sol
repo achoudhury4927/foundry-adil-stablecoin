@@ -24,6 +24,7 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/Ag
  *
  * @notice This contract is the core of the DSC System. It handles all the logic for minting and redeeming Dsc, as well as depositing and withdrawing collateral
  * @notice This contract is loosely based on the MakerDAO DSS (DAI) system.
+ * @dev Ensure ITestDSCEngine and its implemented functions are removed before deployment
  */
 
 contract DSCEngine is IDSCEngine, ReentrancyGuard, ITestDSCEngine {
