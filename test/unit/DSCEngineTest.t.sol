@@ -16,7 +16,7 @@ contract DSCEngineTest is Test {
     DecentralisedStableCoin dsc;
     DSCEngine dscEngine;
     HelperConfig helperConfig;
-    Reject rejecter;
+    //Reject rejecter;
     address wethUsdPriceFeed;
     address wbtcUsdPriceFeed;
     address weth;
@@ -24,14 +24,16 @@ contract DSCEngineTest is Test {
 
     address public USER = makeAddr("user");
     uint256 public constant TENETHER = 10 ether;
+    uint256 public constant FIVEBITCOIN = 5 ether;
 
     function setUp() public {
-        rejecter = new Reject();
+        //rejecter = new Reject();
         deployer = new DeployDSC();
         (dsc, dscEngine, helperConfig) = deployer.run();
         (wethUsdPriceFeed, wbtcUsdPriceFeed, weth, wbtc,) = helperConfig.activeNetworkConfig();
         MockERC20WETH(weth).mint(USER, TENETHER);
-        MockERC20WETH(weth).mint(address(rejecter), TENETHER);
+        MockERC20WBTC(wbtc).mint(USER, FIVEBITCOIN);
+        //MockERC20WETH(weth).mint(address(rejecter), TENETHER);
     }
 
     address[] tokenAddress;
@@ -57,6 +59,17 @@ contract DSCEngineTest is Test {
 
     function test_Constructor_UpdatesDscAddressCorrectly() public {
         assertEq(dscEngine.getDscAddress(), address(dsc));
+    }
+
+    function test_GetAccountCollateralValue_ReturnsCorrectCollateralValue() public {
+        vm.startPrank(USER);
+        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+        MockERC20WBTC(wbtc).approve(address(dscEngine), FIVEBITCOIN);
+        dscEngine.depositCollateral(weth, TENETHER);
+        dscEngine.depositCollateral(wbtc, FIVEBITCOIN);
+        vm.stopPrank();
+        uint256 expectedUsd = 25000e18;
+        assertEq(dscEngine.getAccountCollateralValue(USER), expectedUsd);
     }
 
     function test_GetUsdValue_OfEth() public {
@@ -90,7 +103,7 @@ contract DSCEngineTest is Test {
     function test_DepositCollateral_RevertIf_TransferFailed() public {
         //Figure out how to trigger the following error
         //vm.expectRevert(DSCEngine.DSCEngine_TransferFailed.selector);
-        //dscEngine.depositCollateral(weth, TENETHER);
+        //dscEngine.depositCollateral(weth, TENETHER)
     }
 
     function test_DepositCollateral_CollateralDespoitedMappingIsUpated() public {
