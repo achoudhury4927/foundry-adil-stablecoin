@@ -10,4 +10,7 @@ pragma solidity 0.8.21;
  */
 interface ITestDSCEngine {
     function getFromCollateralDepositedMapping(address, address) external returns (uint256);
+    function getFromPricefeedsMapping(address) external returns (address);
+    function getFromCollateralTokensArray(uint256) external returns (address);
+    function getDscAddress() external returns (address);
 }

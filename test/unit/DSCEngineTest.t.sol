@@ -34,6 +34,31 @@ contract DSCEngineTest is Test {
         MockERC20WETH(weth).mint(address(rejecter), TENETHER);
     }
 
+    address[] tokenAddress;
+    address[] priceFeedAddress;
+
+    function test_Constructor_RevertsIf_LengthOfPricefeedsAndTokensNotSame() public {
+        tokenAddress = [weth, wbtc];
+        priceFeedAddress = [wethUsdPriceFeed];
+        DSCEngine revertEngine;
+        vm.expectRevert(DSCEngine.DSCEngine_TokenAddressesAndPriceFeedAddressesMustBeTheSameLength.selector);
+        revertEngine = new DSCEngine(tokenAddress,priceFeedAddress,address(dsc));
+    }
+
+    function test_Constructor_UpdatesPricefeedsMapping() public {
+        assertEq(dscEngine.getFromPricefeedsMapping(weth), wethUsdPriceFeed);
+        assertEq(dscEngine.getFromPricefeedsMapping(wbtc), wbtcUsdPriceFeed);
+    }
+
+    function test_Constructor_UpdatesCollateralTokensArray() public {
+        assertEq(dscEngine.getFromCollateralTokensArray(0), weth);
+        assertEq(dscEngine.getFromCollateralTokensArray(1), wbtc);
+    }
+
+    function test_Constructor_UpdatesDscAddressCorrectly() public {
+        assertEq(dscEngine.getDscAddress(), address(dsc));
+    }
+
     function test_GetUsdValue_OfEth() public {
         uint256 ethAmount = 15e18; //15 eth = 15,000,000,000,000,000,000 gwei
         uint256 expectedUsd = 30000e18; //15*2000 = 30,000. Base e18 for easy multiplication of eth in gwei format.

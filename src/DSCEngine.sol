@@ -63,11 +63,6 @@ contract DSCEngine is IDSCEngine, ReentrancyGuard, ITestDSCEngine {
         _;
     }
 
-    /**
-     * Base Goerli Chainlink Pricefeeds:
-     * BTC/USD - 0xAC15714c08986DACC0379193e22382736796496f
-     * ETH/USD - 0xcD2A119bD1F7DF95d706DE6F2057fDD45A0503E2
-     */
     constructor(
         address[] memory tokenAddress,
         address[] memory priceFeedAddress,
@@ -136,6 +131,21 @@ contract DSCEngine is IDSCEngine, ReentrancyGuard, ITestDSCEngine {
         returns (uint256)
     {
         return s_collateralDeposited[userAddress][tokenCollateralAddress];
+    }
+
+    /*================= TEST FUNCTION FROM ITestDSCEngine REMOVE BEFORE DEPLOY =================*/
+    function getFromPricefeedsMapping(address tokenAddress) external view returns (address) {
+        return s_priceFeeds[tokenAddress];
+    }
+
+    /*================= TEST FUNCTION FROM ITestDSCEngine REMOVE BEFORE DEPLOY =================*/
+    function getFromCollateralTokensArray(uint256 index) external view returns (address) {
+        return s_collateralTokens[index];
+    }
+
+    /*================= TEST FUNCTION FROM ITestDSCEngine REMOVE BEFORE DEPLOY =================*/
+    function getDscAddress() external view returns (address) {
+        return address(i_Dsc);
     }
 
     function _getAccountInformation(address user)
