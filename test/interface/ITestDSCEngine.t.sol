@@ -13,4 +13,5 @@ interface ITestDSCEngine {
     function getFromPricefeedsMapping(address) external returns (address);
     function getFromCollateralTokensArray(uint256) external returns (address);
     function getDscAddress() external returns (address);
+    function getFromDSCMintedMapping(address user) external view returns (uint256);
 }

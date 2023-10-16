@@ -160,6 +160,7 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
         return address(i_Dsc);
     }
 
+    /*================= TEST FUNCTION FROM ITestDSCEngine REMOVE BEFORE DEPLOY =================*/
     function getFromDSCMintedMapping(address user) external view returns (uint256) {
         return s_DscMinted[user];
     }
