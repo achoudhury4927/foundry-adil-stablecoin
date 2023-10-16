@@ -25,6 +25,7 @@ contract DSCEngineTest is Test {
     address public USER = makeAddr("user");
     uint256 public constant TENETHER = 10 ether;
     uint256 public constant FIVEBITCOIN = 5 ether;
+    uint256 public constant ONETHOUSANDDSC = 1 ether;
 
     function setUp() public {
         //rejecter = new Reject();
@@ -128,5 +129,13 @@ contract DSCEngineTest is Test {
         MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
         dscEngine.depositCollateral(weth, TENETHER);
         assertEq(TENETHER, MockERC20WETH(weth).balanceOf(address(dscEngine)));
+    }
+
+    function test_DepositCollateralAndMintDSC_TransfersCollateralToDSCEngine() public {
+        vm.startPrank(USER);
+        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+        dscEngine.depositCollateralAndMintDsc(weth, TENETHER, ONETHOUSANDDSC);
+        assertEq(TENETHER, dscEngine.getFromCollateralDepositedMapping(USER, weth));
+        assertEq(ONETHOUSANDDSC, dscEngine.getFromDSCMintedMapping(USER));
     }
 }

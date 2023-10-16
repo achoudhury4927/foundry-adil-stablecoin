@@ -2,7 +2,6 @@
 
 pragma solidity 0.8.21;
 
-import {IDSCEngine} from "./IDSCEngine.sol";
 import {ITestDSCEngine} from "../test/interface/ITestDSCEngine.t.sol";
 import {DecentralisedStableCoin} from "./DecentralisedStableCoin.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -27,7 +26,7 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/Ag
  * @dev Ensure ITestDSCEngine and its implemented functions are removed before deployment
  */
 
-contract DSCEngine is IDSCEngine, ReentrancyGuard, ITestDSCEngine {
+contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
     error DSCEngine_AmountNeedsToBeMoreThanZero();
     error DSCEngine_TokenAddressesAndPriceFeedAddressesMustBeTheSameLength();
     error DSCEngine_NotAllowedToken();
@@ -81,14 +80,27 @@ contract DSCEngine is IDSCEngine, ReentrancyGuard, ITestDSCEngine {
         i_Dsc = DecentralisedStableCoin(decentralisedStableCoinAddress);
     }
 
-    function depositCollateralAndMintDsc() external {}
+    /**
+     * @param tokenCollateralAddress The address of the token to deposit as collateral
+     * @param amountCollateral The amount of collateral to deposit
+     * @param amountDscToMint The amount of decentralised stablecoin to mint
+     * @notice This function will deposit collateral and then mint DSC in one transaction
+     */
+    function depositCollateralAndMintDsc(
+        address tokenCollateralAddress,
+        uint256 amountCollateral,
+        uint256 amountDscToMint
+    ) external {
+        depositCollateral(tokenCollateralAddress, amountCollateral);
+        mintDsc(amountDscToMint);
+    }
 
     /**
      * @param tokenCollateralAddress The address of the token to deposit as collateral
      * @param amountCollateral The amount of collateral to deposit
      */
     function depositCollateral(address tokenCollateralAddress, uint256 amountCollateral)
-        external
+        public
         moreThanZero(amountCollateral)
         isAllowedToken(tokenCollateralAddress)
         nonReentrant
@@ -109,7 +121,7 @@ contract DSCEngine is IDSCEngine, ReentrancyGuard, ITestDSCEngine {
     /**
      * @param amountDscToMint The amount of Dsc to mint
      */
-    function mintDsc(uint256 amountDscToMint) external moreThanZero(amountDscToMint) nonReentrant {
+    function mintDsc(uint256 amountDscToMint) public moreThanZero(amountDscToMint) nonReentrant {
         s_DscMinted[msg.sender] += amountDscToMint;
         _revertIfHealthFactorIsBroken(msg.sender);
         bool minted = i_Dsc.mint(msg.sender, amountDscToMint);
@@ -146,6 +158,10 @@ contract DSCEngine is IDSCEngine, ReentrancyGuard, ITestDSCEngine {
     /*================= TEST FUNCTION FROM ITestDSCEngine REMOVE BEFORE DEPLOY =================*/
     function getDscAddress() external view returns (address) {
         return address(i_Dsc);
+    }
+
+    function getFromDSCMintedMapping(address user) external view returns (uint256) {
+        return s_DscMinted[user];
     }
 
     function _getAccountInformation(address user)
