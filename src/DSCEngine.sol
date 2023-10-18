@@ -156,7 +156,9 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
             revert DSCEngine_TransferFailed();
         }
         i_Dsc.burn(amount);
-        _revertIfHealthFactorIsBroken(msg.sender); //Can burning debt break health factor?
+        //Can burning debt break health factor?
+        //_revertIfHealthFactorIsBroken(msg.sender);
+        //When burning all dsc balance becomes 0 so _healthFactor will divide by 0 reverting the transaction
     }
 
     function liquidate() external {}

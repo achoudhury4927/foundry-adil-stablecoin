@@ -16,7 +16,6 @@ contract DSCEngineTest is Test {
     DecentralisedStableCoin dsc;
     DSCEngine dscEngine;
     HelperConfig helperConfig;
-    //Reject rejecter;
     address wethUsdPriceFeed;
     address wbtcUsdPriceFeed;
     address weth;
@@ -28,13 +27,11 @@ contract DSCEngineTest is Test {
     uint256 public constant ONETHOUSANDDSC = 1 ether;
 
     function setUp() public {
-        //rejecter = new Reject();
         deployer = new DeployDSC();
         (dsc, dscEngine, helperConfig) = deployer.run();
         (wethUsdPriceFeed, wbtcUsdPriceFeed, weth, wbtc,) = helperConfig.activeNetworkConfig();
         MockERC20WETH(weth).mint(USER, TENETHER);
         MockERC20WBTC(wbtc).mint(USER, FIVEBITCOIN);
-        //MockERC20WETH(weth).mint(address(rejecter), TENETHER);
     }
 
     address[] tokenAddress;
@@ -112,6 +109,7 @@ contract DSCEngineTest is Test {
         MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
         dscEngine.depositCollateral(weth, TENETHER);
         assertEq(TENETHER, dscEngine.getFromCollateralDepositedMapping(USER, weth));
+        vm.stopPrank();
     }
 
     event CollateralDeposited(address indexed user, address indexed token, uint256 indexed amount);
@@ -122,6 +120,7 @@ contract DSCEngineTest is Test {
         vm.expectEmit(true, true, true, true);
         emit CollateralDeposited(USER, weth, TENETHER);
         dscEngine.depositCollateral(weth, TENETHER);
+        vm.stopPrank();
     }
 
     function test_DepositCollateral_TransfersCollateralToDSCEngine() public {
@@ -129,6 +128,7 @@ contract DSCEngineTest is Test {
         MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
         dscEngine.depositCollateral(weth, TENETHER);
         assertEq(TENETHER, MockERC20WETH(weth).balanceOf(address(dscEngine)));
+        vm.stopPrank();
     }
 
     function test_DepositCollateralAndMintDSC_TransfersCollateralToDSCEngine() public {
@@ -137,5 +137,73 @@ contract DSCEngineTest is Test {
         dscEngine.depositCollateralAndMintDsc(weth, TENETHER, ONETHOUSANDDSC);
         assertEq(TENETHER, dscEngine.getFromCollateralDepositedMapping(USER, weth));
         assertEq(ONETHOUSANDDSC, dscEngine.getFromDSCMintedMapping(USER));
+        vm.stopPrank();
+    }
+
+    function test_BurnDsc_RevertsIfAmountIsZero() public {
+        vm.expectRevert(DSCEngine.DSCEngine_AmountNeedsToBeMoreThanZero.selector);
+        dscEngine.burnDsc(0);
+    }
+
+    function test_BurnDsc_UpdatesDSCMintedMapping() public {
+        vm.startPrank(USER);
+        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+        dsc.approve(address(dscEngine), TENETHER);
+        dscEngine.depositCollateralAndMintDsc(weth, TENETHER, ONETHOUSANDDSC);
+        assertEq(ONETHOUSANDDSC, dscEngine.getFromDSCMintedMapping(USER));
+        dscEngine.burnDsc(ONETHOUSANDDSC);
+        assertEq(0, dscEngine.getFromDSCMintedMapping(USER));
+        vm.stopPrank();
+    }
+
+    function test_BurnDsc_ReducesDSCBalanceCorrectly() public {
+        vm.startPrank(USER);
+        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+        dsc.approve(address(dscEngine), TENETHER);
+        dscEngine.depositCollateralAndMintDsc(weth, TENETHER, ONETHOUSANDDSC);
+        assertEq(ONETHOUSANDDSC, dsc.balanceOf(USER));
+        dscEngine.burnDsc(ONETHOUSANDDSC);
+        assertEq(0, dsc.balanceOf(USER));
+        vm.stopPrank();
+    }
+
+    function test_RedeemCollateral_RevertsIfAmountIsZero() public {
+        vm.expectRevert(DSCEngine.DSCEngine_AmountNeedsToBeMoreThanZero.selector);
+        dscEngine.redeemCollateral(weth, 0);
+    }
+
+    function test_RedeemCollateral_UpdatesCollateralDepositedMapping() public {
+        vm.startPrank(USER);
+        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+        dsc.approve(address(dscEngine), TENETHER);
+        dscEngine.depositCollateralAndMintDsc(weth, TENETHER, ONETHOUSANDDSC);
+        assertEq(TENETHER, dscEngine.getFromCollateralDepositedMapping(USER, weth));
+        dscEngine.redeemCollateral(weth, (TENETHER / 2));
+        assertEq(TENETHER / 2, dscEngine.getFromCollateralDepositedMapping(USER, weth));
+        vm.stopPrank();
+    }
+
+    event CollatedRedeemed(address indexed user, address indexed token, uint256 indexed amount);
+
+    function test_RedeemCollateral_EmitsCollateralRedeemed() public {
+        vm.startPrank(USER);
+        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+        dsc.approve(address(dscEngine), TENETHER * 2);
+        dscEngine.depositCollateralAndMintDsc(weth, TENETHER, ONETHOUSANDDSC);
+        vm.expectEmit(true, true, true, true);
+        emit CollatedRedeemed(USER, weth, TENETHER / 2);
+        dscEngine.redeemCollateral(weth, (TENETHER / 2));
+        vm.stopPrank();
+    }
+
+    function test_RedeemCollateralForDsc_TransfersCollateralToUser() public {
+        vm.startPrank(USER);
+        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+        dsc.approve(address(dscEngine), TENETHER * 2);
+        dscEngine.depositCollateralAndMintDsc(weth, TENETHER, ONETHOUSANDDSC);
+        dscEngine.redeemCollateral(weth, (TENETHER / 2));
+        assertEq(TENETHER / 2, dscEngine.getFromCollateralDepositedMapping(USER, weth));
+        assertEq(TENETHER / 2, MockERC20WETH(weth).balanceOf(USER));
+        vm.stopPrank();
     }
 }
