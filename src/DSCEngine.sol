@@ -34,6 +34,7 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
     error DSCEngine_BreaksHealthFactor(uint256);
     error DSCEngine_MintFailed();
     error DSCEngine_HealthFactorOkay();
+    error DSCEngine_HealthFactorNotImproved();
 
     uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10;
     uint256 private constant PRECISION = 1e18;
@@ -50,7 +51,9 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
     DecentralisedStableCoin private immutable i_Dsc;
 
     event CollateralDeposited(address indexed user, address indexed token, uint256 indexed amount);
-    event CollatedRedeemed(address indexed user, address indexed token, uint256 indexed amount);
+    event CollatedRedeemed(
+        address indexed redeemedFrom, address indexed redeemedTo, address indexed token, uint256 amount
+    );
 
     modifier moreThanZero(uint256 amount) {
         if (amount == 0) {
@@ -140,13 +143,7 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
         moreThanZero(amountCollateral)
         nonReentrant
     {
-        s_collateralDeposited[msg.sender][tokenCollateralAddress] -= amountCollateral;
-        emit CollatedRedeemed(msg.sender, tokenCollateralAddress, amountCollateral);
-
-        bool success = IERC20(tokenCollateralAddress).transfer(msg.sender, amountCollateral);
-        if (!success) {
-            revert DSCEngine_TransferFailed();
-        }
+        _redeemCollateral(tokenCollateralAddress, amountCollateral, msg.sender, msg.sender);
         _revertIfHealthFactorIsBroken(msg.sender);
     }
 
@@ -163,18 +160,9 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
     }
 
     function burnDsc(uint256 amount) public moreThanZero(amount) {
-        s_DscMinted[msg.sender] -= amount;
-        bool success = i_Dsc.transferFrom(msg.sender, address(this), amount);
-        if (!success) {
-            revert DSCEngine_TransferFailed();
-        }
-        i_Dsc.burn(amount);
-        //Can burning debt break health factor?
-        //_revertIfHealthFactorIsBroken(msg.sender);
-        //When burning all dsc balance becomes 0 so _healthFactor will divide by 0 reverting the transaction
+        _burnDsc(amount, msg.sender, msg.sender);
+        _revertIfHealthFactorIsBroken(msg.sender);
     }
-
-    //If someone is almost undercollateralised, the engine will pay the collateral to the liquidator
 
     /**
      * @param collateral The address of the erc20 collateral token to liquidate
@@ -198,6 +186,13 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
         uint256 tokenAmountFromDebtCovered = getTokenAmountFromUsd(collateral, debtToCover);
         uint256 bonusCollateral = (tokenAmountFromDebtCovered * LIQUIDATION_BONUS) / LIQUIDATOR_PRECISION;
         uint256 totalCollateralToRedeem = tokenAmountFromDebtCovered + bonusCollateral;
+        _redeemCollateral(collateral, totalCollateralToRedeem, user, msg.sender);
+        _burnDsc(debtToCover, user, msg.sender);
+        uint256 endingUserHealthFactor = _healthFactor(user);
+        if (endingUserHealthFactor <= startingUserHealthFactor) {
+            revert DSCEngine_HealthFactorNotImproved();
+        }
+        _revertIfHealthFactorIsBroken(msg.sender);
     }
 
     function getHealthFactor() external view {}
@@ -229,6 +224,33 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
     /*================= TEST FUNCTION FROM ITestDSCEngine REMOVE BEFORE DEPLOY =================*/
     function getFromDSCMintedMapping(address user) external view returns (uint256) {
         return s_DscMinted[user];
+    }
+
+    function _redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral, address from, address to)
+        private
+    {
+        s_collateralDeposited[from][tokenCollateralAddress] -= amountCollateral;
+        emit CollatedRedeemed(from, to, tokenCollateralAddress, amountCollateral);
+
+        bool success = IERC20(tokenCollateralAddress).transfer(to, amountCollateral);
+        if (!success) {
+            revert DSCEngine_TransferFailed();
+        }
+    }
+
+    /**
+     * @param amount The amount of DSC to burn
+     * @param onBehalfOf Who is burning the dsc (will be same as dscFrom on normal burn, the liqduiator in liquidate())
+     * @param dscFrom Whose dsc is being burned
+     * @dev Low-level internal function, do not call unless function calling it is checking for health factor
+     */
+    function _burnDsc(uint256 amount, address onBehalfOf, address dscFrom) public moreThanZero(amount) {
+        s_DscMinted[onBehalfOf] -= amount;
+        bool success = i_Dsc.transferFrom(dscFrom, address(this), amount);
+        if (!success) {
+            revert DSCEngine_TransferFailed();
+        }
+        i_Dsc.burn(amount);
     }
 
     function _getAccountInformation(address user)
