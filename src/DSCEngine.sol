@@ -27,6 +27,10 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/Ag
  */
 
 contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
+    //########//
+    // ERRORS //
+    //########//
+
     error DSCEngine_AmountNeedsToBeMoreThanZero();
     error DSCEngine_TokenAddressesAndPriceFeedAddressesMustBeTheSameLength();
     error DSCEngine_NotAllowedToken();
@@ -36,13 +40,18 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
     error DSCEngine_HealthFactorOkay();
     error DSCEngine_HealthFactorNotImproved();
 
+    //#################//
+    // STATE VARIABLES //
+    //#################//
+
     uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10;
     uint256 private constant PRECISION = 1e18;
-    uint256 private constant LIQUIDATION_THRESHOLD = 50;
+    uint256 private constant LIQUIDATION_THRESHOLD = 50; //200% Overcollateralised
     uint256 private constant LIQUIDATION_PRECISION = 100;
     uint256 private constant LIQUIDATION_BONUS = 10; //This is 10% Bonus
     uint256 private constant LIQUIDATOR_PRECISION = 100;
     uint256 private constant MIN_HEALTH_FACTOR = 1e18;
+
     mapping(address token => address priceFeed) private s_priceFeeds;
     mapping(address user => mapping(address token => uint256 amount)) private s_collateralDeposited;
     mapping(address user => uint256 amountDscMinted) private s_DscMinted;
@@ -50,10 +59,18 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
 
     DecentralisedStableCoin private immutable i_Dsc;
 
+    //########//
+    // EVENTS //
+    //########//
+
     event CollateralDeposited(address indexed user, address indexed token, uint256 indexed amount);
     event CollatedRedeemed(
         address indexed redeemedFrom, address indexed redeemedTo, address indexed token, uint256 amount
     );
+
+    //###########//
+    // MODIFIERS //
+    //###########//
 
     modifier moreThanZero(uint256 amount) {
         if (amount == 0) {
@@ -68,6 +85,10 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
         }
         _;
     }
+
+    //###########//
+    // FUNCTIONS //
+    //###########//
 
     constructor(
         address[] memory tokenAddress,
@@ -159,6 +180,9 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
         }
     }
 
+    /**
+     * @param amount The amount of DSC to burn
+     */
     function burnDsc(uint256 amount) public moreThanZero(amount) {
         _burnDsc(amount, msg.sender, msg.sender);
         _revertIfHealthFactorIsBroken(msg.sender);
@@ -195,8 +219,6 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
         _revertIfHealthFactorIsBroken(msg.sender);
     }
 
-    function getHealthFactor() external view {}
-
     /*================= TEST FUNCTION FROM ITestDSCEngine REMOVE BEFORE DEPLOY =================*/
     function getFromCollateralDepositedMapping(address userAddress, address tokenCollateralAddress)
         external
@@ -226,6 +248,13 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
         return s_DscMinted[user];
     }
 
+    /**
+     * @param tokenCollateralAddress The address of the collateral bein redeemed
+     * @param amountCollateral The amount of collateral
+     * @param from The address whose collateral is being redeemed
+     * @param to The address that is receiving the collateral
+     * @dev Low-level internal function, do not call unless function calling it is checking for health factor
+     */
     function _redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral, address from, address to)
         private
     {
@@ -253,6 +282,11 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
         i_Dsc.burn(amount);
     }
 
+    /**
+     * @param user The address of the account
+     * @return totalDscMinted The amount of dsc the account currently has minted
+     * @return collateralValueInUsd The value of the collateral the account currently has
+     */
     function _getAccountInformation(address user)
         private
         view
@@ -272,6 +306,10 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
         return (collateralAdjustedForThreshold * PRECISION) / totalDscMinted;
     }
 
+    /**
+     * Reverts transaction if health factor is below MIN_HEALTH_FACTOR
+     * @param user The address of the account
+     */
     function _revertIfHealthFactorIsBroken(address user) internal view {
         uint256 userHealthFactor = _healthFactor(user);
         if (userHealthFactor < MIN_HEALTH_FACTOR) {
