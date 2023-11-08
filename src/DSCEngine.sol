@@ -143,6 +143,18 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
     }
 
     /**
+     * @param amountDscToMint The amount of Dsc to mint
+     */
+    function mintDsc(uint256 amountDscToMint) public moreThanZero(amountDscToMint) nonReentrant {
+        s_DscMinted[msg.sender] += amountDscToMint;
+        _revertIfHealthFactorIsBroken(msg.sender);
+        bool minted = i_Dsc.mint(msg.sender, amountDscToMint);
+        if (!minted) {
+            revert DSCEngine_MintFailed();
+        }
+    }
+
+    /**
      * @param tokenCollateralAddress The address of the token to deposit as collateral
      * @param amountCollateral The amount of collateral to redeem
      * @param amountOfDscToBurn The amount of Dsc to mint
@@ -166,18 +178,6 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
     {
         _redeemCollateral(tokenCollateralAddress, amountCollateral, msg.sender, msg.sender);
         _revertIfHealthFactorIsBroken(msg.sender);
-    }
-
-    /**
-     * @param amountDscToMint The amount of Dsc to mint
-     */
-    function mintDsc(uint256 amountDscToMint) public moreThanZero(amountDscToMint) nonReentrant {
-        s_DscMinted[msg.sender] += amountDscToMint;
-        _revertIfHealthFactorIsBroken(msg.sender);
-        bool minted = i_Dsc.mint(msg.sender, amountDscToMint);
-        if (!minted) {
-            revert DSCEngine_MintFailed();
-        }
     }
 
     /**

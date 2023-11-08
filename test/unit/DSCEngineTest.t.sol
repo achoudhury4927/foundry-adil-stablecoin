@@ -37,6 +37,8 @@ contract DSCEngineTest is Test {
     address[] tokenAddress;
     address[] priceFeedAddress;
 
+    //--------------Constructor Tests--------------//
+
     function test_Constructor_RevertsIf_LengthOfPricefeedsAndTokensNotSame() public {
         tokenAddress = [weth, wbtc];
         priceFeedAddress = [wethUsdPriceFeed];
@@ -59,6 +61,17 @@ contract DSCEngineTest is Test {
         assertEq(dscEngine.getDscAddress(), address(dsc));
     }
 
+    //--------------GetTokenAmountFromUsd Tests--------------//
+
+    function test_GetTokenAmountFromUsd_ReturnsCorrectTokenValue() public {
+        uint256 usdAmount = 2000 ether; //Usd is provided in wei so 1e18 (1 ether) represents 1 usd
+        uint256 expectedWeth = 1 ether; //As the static price from the mock is 1 ETH = $2000 we should get 1 eth as the result
+        uint256 actualWeth = dscEngine.getTokenAmountFromUsd(weth, usdAmount);
+        assertEq(expectedWeth, actualWeth);
+    }
+
+    //--------------GetAccountCollateralValue Tests--------------//
+
     function test_GetAccountCollateralValue_ReturnsCorrectCollateralValue() public {
         vm.startPrank(USER);
         MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
@@ -69,6 +82,8 @@ contract DSCEngineTest is Test {
         uint256 expectedUsd = 25000e18;
         assertEq(dscEngine.getAccountCollateralValue(USER), expectedUsd);
     }
+
+    //--------------GetUsdValue Tests--------------//
 
     function test_GetUsdValue_OfEth() public {
         uint256 ethAmount = 15e18; //15 eth = 15,000,000,000,000,000,000 gwei
@@ -83,6 +98,20 @@ contract DSCEngineTest is Test {
         uint256 actualUsd = dscEngine.getUsdValue(wbtc, btcAmount);
         assertEq(expectedUsd, actualUsd);
     }
+
+    //--------------DepositCollateralAndMintDsc Tests--------------//
+
+    function test_DepositCollateralAndMintDsc_TransfersCollateralToDSCEngine() public {
+        vm.startPrank(USER);
+        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+        dscEngine.depositCollateralAndMintDsc(weth, TENETHER, ONETHOUSANDDSC);
+        assertEq(TENETHER, dscEngine.getFromCollateralDepositedMapping(USER, weth));
+        assertEq(ONETHOUSANDDSC, dscEngine.getFromDSCMintedMapping(USER));
+        assertEq(dsc.balanceOf(USER), ONETHOUSANDDSC);
+        vm.stopPrank();
+    }
+
+    //--------------DepositCollateral Tests--------------//
 
     function test_DepositCollateral_RevertIf_CollateralDepositedIsZero() public {
         vm.startPrank(USER);
@@ -130,15 +159,27 @@ contract DSCEngineTest is Test {
         assertEq(TENETHER, MockERC20WETH(weth).balanceOf(address(dscEngine)));
         vm.stopPrank();
     }
+    //--------------MintDsc Tests--------------//
 
-    function test_DepositCollateralAndMintDSC_TransfersCollateralToDSCEngine() public {
+    function test_MintDsc_UpdatesDscMintedMapping() public {
         vm.startPrank(USER);
         MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
-        dscEngine.depositCollateralAndMintDsc(weth, TENETHER, ONETHOUSANDDSC);
-        assertEq(TENETHER, dscEngine.getFromCollateralDepositedMapping(USER, weth));
+        dscEngine.depositCollateral(weth, TENETHER);
+        dscEngine.mintDsc(ONETHOUSANDDSC);
         assertEq(ONETHOUSANDDSC, dscEngine.getFromDSCMintedMapping(USER));
         vm.stopPrank();
     }
+
+    function test_MintDsc_RevertsIf_HealthFactorIsBroken() public {
+        vm.startPrank(USER);
+        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+        dscEngine.depositCollateral(weth, 1 ether);
+        vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine_BreaksHealthFactor.selector, 1000));
+        dscEngine.mintDsc(ONETHOUSANDDSC * 1 ether);
+        vm.stopPrank();
+    }
+
+    //--------------BurnDsc Tests--------------//
 
     function test_BurnDsc_RevertsIfAmountIsZero() public {
         vm.expectRevert(DSCEngine.DSCEngine_AmountNeedsToBeMoreThanZero.selector);
