@@ -22,6 +22,7 @@ contract DSCEngineTest is Test {
     address wbtc;
 
     address public USER = makeAddr("user");
+    address public LIQUIDATOR = makeAddr("liquidator");
     uint256 public constant TENETHER = 10 ether;
     uint256 public constant FIVEBITCOIN = 5 ether;
     uint256 public constant ONETHOUSANDDSC = 1 ether;
@@ -252,4 +253,24 @@ contract DSCEngineTest is Test {
         //Can healthfactor be broken if dsc is burned?
         //Wouldnt healthfactor only be improved by burning DSC?
     }
+
+    //--------------Liquidate Tests--------------//
+    function test_Liquidate_RevertsIf_DebtToCoverIsZero() public {
+        vm.startPrank(LIQUIDATOR);
+        vm.expectRevert(DSCEngine.DSCEngine_AmountNeedsToBeMoreThanZero.selector);
+        dscEngine.liquidate(weth, USER, 0);
+        vm.stopPrank();
+    }
+
+    function test_Liquidate_RevertsIf_UserHealthFactorIsOkay() public approveWeth {
+        dsc.approve(address(dscEngine), TENETHER);
+        dscEngine.depositCollateralAndMintDsc(weth, TENETHER, ONETHOUSANDDSC);
+        vm.stopPrank();
+        vm.prank(LIQUIDATOR);
+        vm.expectRevert(DSCEngine.DSCEngine_HealthFactorOkay.selector);
+        dscEngine.liquidate(weth, USER, ONETHOUSANDDSC);
+    }
+
+    //What is user has no collateral or dsc minted?
+
 }
