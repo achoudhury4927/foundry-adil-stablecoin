@@ -99,11 +99,17 @@ contract DSCEngineTest is Test {
         assertEq(expectedUsd, actualUsd);
     }
 
-    //--------------DepositCollateralAndMintDsc Tests--------------//
 
-    function test_DepositCollateralAndMintDsc_TransfersCollateralToDSCEngine() public {
+    //Modifier to approve weth for the user, this function does not stop prank
+    modifier approveWeth() {
         vm.startPrank(USER);
         MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+        _;
+    }
+
+    //--------------DepositCollateralAndMintDsc Tests--------------//
+
+    function test_DepositCollateralAndMintDsc_TransfersCollateralToDSCEngine() public approveWeth {
         dscEngine.depositCollateralAndMintDsc(weth, TENETHER, ONETHOUSANDDSC);
         assertEq(TENETHER, dscEngine.getFromCollateralDepositedMapping(USER, weth));
         assertEq(ONETHOUSANDDSC, dscEngine.getFromDSCMintedMapping(USER));
@@ -113,9 +119,7 @@ contract DSCEngineTest is Test {
 
     //--------------DepositCollateral Tests--------------//
 
-    function test_DepositCollateral_RevertIf_CollateralDepositedIsZero() public {
-        vm.startPrank(USER);
-        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+    function test_DepositCollateral_RevertIf_CollateralDepositedIsZero() public approveWeth {
         vm.expectRevert(DSCEngine.DSCEngine_AmountNeedsToBeMoreThanZero.selector);
         dscEngine.depositCollateral(weth, 0);
         vm.stopPrank();
@@ -133,9 +137,7 @@ contract DSCEngineTest is Test {
         //dscEngine.depositCollateral(weth, TENETHER)
     }
 
-    function test_DepositCollateral_CollateralDespoitedMappingIsUpated() public {
-        vm.startPrank(USER);
-        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+    function test_DepositCollateral_CollateralDespoitedMappingIsUpated() public approveWeth{
         dscEngine.depositCollateral(weth, TENETHER);
         assertEq(TENETHER, dscEngine.getFromCollateralDepositedMapping(USER, weth));
         vm.stopPrank();
@@ -143,36 +145,28 @@ contract DSCEngineTest is Test {
 
     event CollateralDeposited(address indexed user, address indexed token, uint256 indexed amount);
 
-    function test_DepositCollateral_EmitsCollateralDeposited() public {
-        vm.startPrank(USER);
-        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+    function test_DepositCollateral_EmitsCollateralDeposited() public approveWeth {
         vm.expectEmit(true, true, true, true);
         emit CollateralDeposited(USER, weth, TENETHER);
         dscEngine.depositCollateral(weth, TENETHER);
         vm.stopPrank();
     }
 
-    function test_DepositCollateral_TransfersCollateralToDSCEngine() public {
-        vm.startPrank(USER);
-        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+    function test_DepositCollateral_TransfersCollateralToDSCEngine() public approveWeth {
         dscEngine.depositCollateral(weth, TENETHER);
         assertEq(TENETHER, MockERC20WETH(weth).balanceOf(address(dscEngine)));
         vm.stopPrank();
     }
     //--------------MintDsc Tests--------------//
 
-    function test_MintDsc_UpdatesDscMintedMapping() public {
-        vm.startPrank(USER);
-        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+    function test_MintDsc_UpdatesDscMintedMapping() public approveWeth {
         dscEngine.depositCollateral(weth, TENETHER);
         dscEngine.mintDsc(ONETHOUSANDDSC);
         assertEq(ONETHOUSANDDSC, dscEngine.getFromDSCMintedMapping(USER));
         vm.stopPrank();
     }
 
-    function test_MintDsc_RevertsIf_HealthFactorIsBroken() public {
-        vm.startPrank(USER);
-        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+    function test_MintDsc_RevertsIf_HealthFactorIsBroken() public approveWeth {
         dscEngine.depositCollateral(weth, 1 ether);
         vm.expectRevert(abi.encodeWithSelector(DSCEngine.DSCEngine_BreaksHealthFactor.selector, 1000));
         dscEngine.mintDsc(ONETHOUSANDDSC * 1 ether);
@@ -181,9 +175,7 @@ contract DSCEngineTest is Test {
 
     //--------------RedeemCollateralForDsc Tests--------------//
 
-    function test_RedeemCollateralForDsc_TransfersCollateralToUser() public {
-        vm.startPrank(USER);
-        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+    function test_RedeemCollateralForDsc_TransfersCollateralToUser() public approveWeth {
         dsc.approve(address(dscEngine), TENETHER * 2);
         dscEngine.depositCollateralAndMintDsc(weth, TENETHER, ONETHOUSANDDSC);
         dscEngine.redeemCollateralForDsc(weth, (TENETHER / 2), (ONETHOUSANDDSC / 2));
@@ -200,9 +192,7 @@ contract DSCEngineTest is Test {
         dscEngine.redeemCollateral(weth, 0);
     }
 
-    function test_RedeemCollateral_RevertsIfHealthFactorIsBroken() public {
-        vm.startPrank(USER);
-        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+    function test_RedeemCollateral_RevertsIfHealthFactorIsBroken() public approveWeth {
         dsc.approve(address(dscEngine), TENETHER);
         dscEngine.depositCollateralAndMintDsc(weth, TENETHER, ONETHOUSANDDSC);
         assertEq(TENETHER, dscEngine.getFromCollateralDepositedMapping(USER, weth));
@@ -211,9 +201,7 @@ contract DSCEngineTest is Test {
         vm.stopPrank();
     }
 
-    function test_RedeemCollateral_UpdatesCollateralDepositedMapping() public {
-        vm.startPrank(USER);
-        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+    function test_RedeemCollateral_UpdatesCollateralDepositedMapping() public approveWeth {
         dsc.approve(address(dscEngine), TENETHER);
         dscEngine.depositCollateralAndMintDsc(weth, TENETHER, ONETHOUSANDDSC);
         assertEq(TENETHER, dscEngine.getFromCollateralDepositedMapping(USER, weth));
@@ -226,9 +214,7 @@ contract DSCEngineTest is Test {
         address indexed redeemedFrom, address indexed redeemedTo, address indexed token, uint256 amount
     );
 
-    function test_RedeemCollateral_EmitsCollateralRedeemed() public {
-        vm.startPrank(USER);
-        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+    function test_RedeemCollateral_EmitsCollateralRedeemed() public approveWeth {
         dsc.approve(address(dscEngine), TENETHER * 2);
         dscEngine.depositCollateralAndMintDsc(weth, TENETHER, ONETHOUSANDDSC);
         vm.expectEmit(true, true, true, true);
@@ -244,9 +230,7 @@ contract DSCEngineTest is Test {
         dscEngine.burnDsc(0);
     }
 
-    function test_BurnDsc_UpdatesDSCMintedMapping() public {
-        vm.startPrank(USER);
-        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+    function test_BurnDsc_UpdatesDSCMintedMapping() public approveWeth {
         dsc.approve(address(dscEngine), TENETHER);
         dscEngine.depositCollateralAndMintDsc(weth, TENETHER, ONETHOUSANDDSC);
         assertEq(ONETHOUSANDDSC, dscEngine.getFromDSCMintedMapping(USER));
@@ -255,9 +239,7 @@ contract DSCEngineTest is Test {
         vm.stopPrank();
     }
 
-    function test_BurnDsc_ReducesDSCBalanceCorrectly() public {
-        vm.startPrank(USER);
-        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+    function test_BurnDsc_ReducesDSCBalanceCorrectly() public approveWeth {
         dsc.approve(address(dscEngine), TENETHER);
         dscEngine.depositCollateralAndMintDsc(weth, TENETHER, ONETHOUSANDDSC);
         assertEq(ONETHOUSANDDSC, dsc.balanceOf(USER));
