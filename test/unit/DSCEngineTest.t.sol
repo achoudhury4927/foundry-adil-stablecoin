@@ -186,9 +186,10 @@ contract DSCEngineTest is Test {
         MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
         dsc.approve(address(dscEngine), TENETHER * 2);
         dscEngine.depositCollateralAndMintDsc(weth, TENETHER, ONETHOUSANDDSC);
-        dscEngine.redeemCollateral(weth, (TENETHER / 2));
+        dscEngine.redeemCollateralForDsc(weth, (TENETHER / 2), (ONETHOUSANDDSC / 2));
         assertEq(TENETHER / 2, dscEngine.getFromCollateralDepositedMapping(USER, weth));
         assertEq(TENETHER / 2, MockERC20WETH(weth).balanceOf(USER));
+        assertEq((ONETHOUSANDDSC / 2), dscEngine.getFromDSCMintedMapping(USER));
         vm.stopPrank();
     }
 
