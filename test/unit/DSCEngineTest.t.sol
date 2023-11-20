@@ -7,6 +7,7 @@ import {DeployDSC} from "../../script/DeployDSC.s.sol";
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
 import {DecentralisedStableCoin} from "../../src/DecentralisedStableCoin.sol";
 import {DSCEngine} from "../../src/DSCEngine.sol";
+import {MockV3Aggregator} from "../mocks/MockV3Aggregator.sol";
 import {MockERC20WETH} from "../mocks/MockERC20WETH.sol";
 import {MockERC20WBTC} from "../mocks/MockERC20WBTC.sol";
 import {Reject} from "../util/Reject.sol";
@@ -33,6 +34,8 @@ contract DSCEngineTest is Test {
         (wethUsdPriceFeed, wbtcUsdPriceFeed, weth, wbtc,) = helperConfig.activeNetworkConfig();
         MockERC20WETH(weth).mint(USER, TENETHER);
         MockERC20WBTC(wbtc).mint(USER, FIVEBITCOIN);
+        MockERC20WETH(weth).mint(LIQUIDATOR, TENETHER);
+        MockERC20WBTC(wbtc).mint(LIQUIDATOR, FIVEBITCOIN);
     }
 
     address[] tokenAddress;
@@ -271,6 +274,37 @@ contract DSCEngineTest is Test {
         dscEngine.liquidate(weth, USER, ONETHOUSANDDSC);
     }
 
-    //What is user has no collateral or dsc minted?
+    function test_Liquidate_RevertsIf_LiquidatingNonUser() public {
+        vm.prank(LIQUIDATOR);
+        vm.expectRevert(DSCEngine.DSCEngine_HealthFactorOkay.selector);
+        dscEngine.liquidate(weth, USER, ONETHOUSANDDSC);
+    }
+
+    function test_Liquidate_CanLiquidateUser() public approveWeth {
+        //Deposit and mint for USER
+        dsc.approve(address(dscEngine), TENETHER);
+        dscEngine.depositCollateralAndMintDsc(weth, TENETHER, ONETHOUSANDDSC);
+        vm.stopPrank();
+        //Deposit and mint for LIQUIDATOR
+        vm.startPrank(LIQUIDATOR);
+        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+        dsc.approve(address(dscEngine), TENETHER);
+        dscEngine.depositCollateralAndMintDsc(weth, TENETHER, ONETHOUSANDDSC * 2);
+        vm.stopPrank();
+        //update prices
+        uint256 startingDscBalance = dscEngine.getFromDSCMintedMapping(USER);
+        uint256 startingCollateralDepositedUsdBalance = dscEngine.getAccountCollateralValue(USER);
+        uint256 startingHealthFactor = dscEngine.getHealthFactor(USER);
+        MockV3Aggregator(wethUsdPriceFeed).updateAnswer(1e7);
+        MockV3Aggregator(wbtcUsdPriceFeed).updateAnswer(1e6);
+        vm.warp(3);
+        uint256 updatedCollateralDepositedUsdBalance = dscEngine.getAccountCollateralValue(USER);
+        uint256 updatedHealthFactor = dscEngine.getHealthFactor(USER);
+        assertNotEq(startingCollateralDepositedUsdBalance,updatedCollateralDepositedUsdBalance);
+        assertNotEq(startingHealthFactor,updatedHealthFactor);
+    
+        vm.startPrank(LIQUIDATOR);
+        dscEngine.liquidate(weth, USER, ONETHOUSANDDSC);
+    }
 
 }

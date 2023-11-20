@@ -7,6 +7,8 @@ import {DecentralisedStableCoin} from "./DecentralisedStableCoin.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+import {console2} from "forge-std/console2.sol";
+
 /**
  * @title DSCEngine
  * @author Adil Choudhury
@@ -208,8 +210,10 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
             revert DSCEngine_HealthFactorOkay();
         }
         uint256 tokenAmountFromDebtCovered = getTokenAmountFromUsd(collateral, debtToCover);
+        console2.log("IM BAAAAAAAAAAAAAAAAACK");
         uint256 bonusCollateral = (tokenAmountFromDebtCovered * LIQUIDATION_BONUS) / LIQUIDATOR_PRECISION;
         uint256 totalCollateralToRedeem = tokenAmountFromDebtCovered + bonusCollateral;
+        console2.log("IM HEREEEEEEEEEEE");
         _redeemCollateral(collateral, totalCollateralToRedeem, user, msg.sender);
         _burnDsc(debtToCover, user, msg.sender);
         uint256 endingUserHealthFactor = _healthFactor(user);
@@ -258,7 +262,10 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
     function _redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral, address from, address to)
         private
     {
+        console2.log(amountCollateral);
+        console2.log(s_collateralDeposited[from][tokenCollateralAddress]);
         s_collateralDeposited[from][tokenCollateralAddress] -= amountCollateral;
+        console2.log("IM HEREEEEEEEEEEE");
         emit CollatedRedeemed(from, to, tokenCollateralAddress, amountCollateral);
 
         bool success = IERC20(tokenCollateralAddress).transfer(to, amountCollateral);
@@ -307,6 +314,10 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
         return (collateralAdjustedForThreshold * PRECISION) / totalDscMinted;
     }
 
+    function getHealthFactor(address user) public view returns (uint256) {
+        return _healthFactor(user);
+    }
+
     /**
      * Reverts transaction if health factor is below MIN_HEALTH_FACTOR
      * @param user The address of the account
@@ -321,6 +332,10 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
     function getTokenAmountFromUsd(address token, uint256 usdAmountInWei) public view returns (uint256) {
         AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
         (, int256 price,,,) = priceFeed.latestRoundData();
+        console2.log(usdAmountInWei);
+        console2.log(PRECISION);
+        console2.log(price);
+        console2.log(ADDITIONAL_FEED_PRECISION);
         return (usdAmountInWei * PRECISION) / (uint256(price) * ADDITIONAL_FEED_PRECISION);
     }
 
