@@ -209,17 +209,23 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
         if (startingUserHealthFactor >= MIN_HEALTH_FACTOR) {
             revert DSCEngine_HealthFactorOkay();
         }
+
         uint256 tokenAmountFromDebtCovered = getTokenAmountFromUsd(collateral, debtToCover);
-        console2.log("IM BAAAAAAAAAAAAAAAAACK");
         uint256 bonusCollateral = (tokenAmountFromDebtCovered * LIQUIDATION_BONUS) / LIQUIDATOR_PRECISION;
         uint256 totalCollateralToRedeem = tokenAmountFromDebtCovered + bonusCollateral;
-        console2.log("IM HEREEEEEEEEEEE");
+
+        if(totalCollateralToRedeem > s_collateralDeposited[user][collateral]){
+            totalCollateralToRedeem = s_collateralDeposited[user][collateral];
+        }
+        
         _redeemCollateral(collateral, totalCollateralToRedeem, user, msg.sender);
         _burnDsc(debtToCover, user, msg.sender);
+
         uint256 endingUserHealthFactor = _healthFactor(user);
         if (endingUserHealthFactor <= startingUserHealthFactor) {
             revert DSCEngine_HealthFactorNotImproved();
         }
+
         _revertIfHealthFactorIsBroken(msg.sender);
     }
 
@@ -262,10 +268,7 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
     function _redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral, address from, address to)
         private
     {
-        console2.log(amountCollateral);
-        console2.log(s_collateralDeposited[from][tokenCollateralAddress]);
         s_collateralDeposited[from][tokenCollateralAddress] -= amountCollateral;
-        console2.log("IM HEREEEEEEEEEEE");
         emit CollatedRedeemed(from, to, tokenCollateralAddress, amountCollateral);
 
         bool success = IERC20(tokenCollateralAddress).transfer(to, amountCollateral);
@@ -332,10 +335,6 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
     function getTokenAmountFromUsd(address token, uint256 usdAmountInWei) public view returns (uint256) {
         AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
         (, int256 price,,,) = priceFeed.latestRoundData();
-        console2.log(usdAmountInWei);
-        console2.log(PRECISION);
-        console2.log(price);
-        console2.log(ADDITIONAL_FEED_PRECISION);
         return (usdAmountInWei * PRECISION) / (uint256(price) * ADDITIONAL_FEED_PRECISION);
     }
 
