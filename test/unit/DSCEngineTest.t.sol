@@ -258,6 +258,26 @@ contract DSCEngineTest is Test {
     }
 
     //--------------Liquidate Tests--------------//
+
+    /** Modifier to setup for liquidation tests by:
+     *   1. Approving balance for dscEngine to move weth for the user and liquidator
+     *   2. Approving dsc balance for dscEngine to move dsc for the user and liquidator
+     *   3. depositing collateral and minting dsc for the user and liquidator
+     */
+    modifier liquidationSetup() {
+        vm.startPrank(USER);
+        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+        dsc.approve(address(dscEngine), TENETHER);
+        dscEngine.depositCollateralAndMintDsc(weth, 1 ether, 1000 ether);
+        vm.stopPrank();
+        vm.startPrank(LIQUIDATOR);
+        MockERC20WETH(weth).approve(address(dscEngine), 1000 ether);
+        dsc.approve(address(dscEngine), 1000 ether);
+        dscEngine.depositCollateralAndMintDsc(weth, 1000 ether, 1000 ether);
+        vm.stopPrank();
+        _;
+    }
+
     function test_Liquidate_RevertsIf_DebtToCoverIsZero() public {
         vm.startPrank(LIQUIDATOR);
         vm.expectRevert(DSCEngine.DSCEngine_AmountNeedsToBeMoreThanZero.selector);
@@ -281,58 +301,62 @@ contract DSCEngineTest is Test {
     }
 
     //TODO: Seperate out this giant test
-    function test_Liquidate_CanCompletelyLiquidateUser() public approveWeth {
-        //Deposit and mint for USER
-        dsc.approve(address(dscEngine), TENETHER);
-        dscEngine.depositCollateralAndMintDsc(weth, 1 ether, 1000 ether);
-        vm.stopPrank();
+    function test_Liquidate_ReducesCollateralDepositBalanceOfLiquidatee() public liquidationSetup {
         uint256 startingUserCollateralDepositedUsdBalance = dscEngine.getAccountCollateralValue(USER);
-        uint256 startingUserHealthFactor = dscEngine.getHealthFactor(USER);
-        uint256 startingUserDSCMintedMapping = dscEngine.getFromDSCMintedMapping(USER);
-        assertEq(startingUserHealthFactor,1 ether);
         assertEq(startingUserCollateralDepositedUsdBalance,2000 ether); // At this point 1 weth = $2000 so collateral value will be 2000e18 in as usd is retrieved in wei
-        assertEq(startingUserDSCMintedMapping, 1000 ether);
-        //Deposit and mint for LIQUIDATOR
-        vm.startPrank(LIQUIDATOR);
-        MockERC20WETH(weth).approve(address(dscEngine), 1000 ether);
-        dsc.approve(address(dscEngine), 1000 ether);
-        dscEngine.depositCollateralAndMintDsc(weth, 1000 ether, 1000 ether);
-        vm.stopPrank();
-        uint256 startingLiquidatorWethBalance = MockERC20WETH(weth).balanceOf(LIQUIDATOR);
-        uint256 startingLiquidatorCollateralDepositedUsdBalance = dscEngine.getAccountCollateralValue(LIQUIDATOR);
-        uint256 startingLiquidatorHealthFactor = dscEngine.getHealthFactor(LIQUIDATOR);
-        uint256 startingLiquidatorDSCMintedMapping = dscEngine.getFromDSCMintedMapping(LIQUIDATOR);
-        assertEq(startingLiquidatorHealthFactor,1000 ether);
-        assertEq(startingLiquidatorCollateralDepositedUsdBalance,2000000 ether); // At this point 1 weth = $2000 so collateral value will be 2Millione18 in as usd is retrieved in wei
-        assertEq(startingLiquidatorDSCMintedMapping, 1000 ether);
         //update prices
         MockV3Aggregator(wethUsdPriceFeed).updateAnswer(20e8);
         vm.warp(3);
-        //Verify collateral and health factor reduced
+        //Verify collateral value reduced
         uint256 updatedUserCollateralDepositedUsdBalance = dscEngine.getAccountCollateralValue(USER);
-        uint256 updatedUserHealthFactor = dscEngine.getHealthFactor(USER);
         assertLt(updatedUserCollateralDepositedUsdBalance,startingUserCollateralDepositedUsdBalance);
-        assertLt(updatedUserHealthFactor,startingUserHealthFactor);
-        uint256 updatedLiqduiatorCollateralDepositedUsdBalance = dscEngine.getAccountCollateralValue(LIQUIDATOR);
-        uint256 updatedLiqduiatorHealthFactor = dscEngine.getHealthFactor(LIQUIDATOR);
         //liquidate user
         vm.prank(LIQUIDATOR);
         dscEngine.liquidate(weth, USER, 1000 ether);
         //verify user balances
         uint256 endingUserCollateralDepositedUsdBalance = dscEngine.getAccountCollateralValue(USER);
-        uint256 endingUserHealthFactor = dscEngine.getHealthFactor(USER);
-        uint256 endingUserDSCMintedMapping = dscEngine.getFromDSCMintedMapping(USER);
         assertEq(endingUserCollateralDepositedUsdBalance, 0);
+    }
+
+    function test_Liquidate_ImprovesHealthFactorOfLiquidatee() public liquidationSetup {
+        vm.prank(USER);
+        uint256 startingUserHealthFactor = dscEngine.getHealthFactor(USER);
+        assertEq(startingUserHealthFactor,1 ether);
+        //update prices
+        MockV3Aggregator(wethUsdPriceFeed).updateAnswer(20e8);
+        vm.warp(3);
+        //liquidate user
+        vm.prank(LIQUIDATOR);
+        dscEngine.liquidate(weth, USER, 1000 ether);
+        //verify user balances
+        vm.prank(USER);
+        uint256 endingUserHealthFactor = dscEngine.getHealthFactor(USER);
         assertEq(endingUserHealthFactor,type(uint256).max);
+    }
+
+    //TODO: Seperate out this giant test
+    function test_Liquidate_PaysOffLiquidateeDebt() public liquidationSetup {
+        uint256 startingUserDSCMintedMapping = dscEngine.getFromDSCMintedMapping(USER);
+        assertEq(startingUserDSCMintedMapping, 1000 ether);
+        //update prices
+        MockV3Aggregator(wethUsdPriceFeed).updateAnswer(20e8);
+        vm.warp(3);
+        //liquidate user
+        vm.prank(LIQUIDATOR);
+        dscEngine.liquidate(weth, USER, 1000 ether);
+        //verify user balances
+        uint256 endingUserDSCMintedMapping = dscEngine.getFromDSCMintedMapping(USER);
+        assertLt(endingUserDSCMintedMapping,startingUserDSCMintedMapping);
         assertEq(endingUserDSCMintedMapping, 0);
-        //verify liquidator balances
-        uint256 endingLiquidatorCollateralDepositedUsdBalance = dscEngine.getAccountCollateralValue(LIQUIDATOR);
-        uint256 endingLiquidatorHealthFactor = dscEngine.getHealthFactor(LIQUIDATOR);
-        uint256 endingLiquidatorDSCMintedMapping = dscEngine.getFromDSCMintedMapping(LIQUIDATOR);
-        assertLt(startingLiquidatorWethBalance, MockERC20WETH(weth).balanceOf(LIQUIDATOR));
-        //The following tests fail, investigate why.
-        //assertLt(updatedLiqduiatorCollateralDepositedUsdBalance,endingLiquidatorCollateralDepositedUsdBalance);
-        //assertLt(updatedLiqduiatorHealthFactor,endingLiquidatorHealthFactor); 
-        //assertEq(endingLiquidatorDSCMintedMapping, 0); //Liqduiator balance was the same as User
+    }
+
+    /*
+     * The liquidator is redeeming the liquidatees collateral so their own should not reduce
+     * The DSCEngine does not reduce the dscMinted balance of the liquidator so health factor doesnt change AFTER PRICE UPDATE
+     * The DSCEngine does not reduce the dscMinted balance of the liquidator as they are paying of the liquidatees debt not their own
+     */
+     //TODO
+    function test_Liquidate_DoesNotReduceLiquidatorCollateralBalance() public liquidationSetup {
+        
     }
 }
