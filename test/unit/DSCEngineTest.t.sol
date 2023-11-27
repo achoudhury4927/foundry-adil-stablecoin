@@ -357,6 +357,59 @@ contract DSCEngineTest is Test {
      */
      //TODO
     function test_Liquidate_DoesNotReduceLiquidatorCollateralBalance() public liquidationSetup {
-        
+        uint256 startingLiquidatorCollateralBalance = dscEngine.getFromCollateralDepositedMapping(LIQUIDATOR, weth);
+        assertEq(startingLiquidatorCollateralBalance,1000 ether);
+
+        MockV3Aggregator(wethUsdPriceFeed).updateAnswer(20e8);
+        vm.warp(3);
+
+        vm.prank(LIQUIDATOR);
+        dscEngine.liquidate(weth, USER, 1000 ether);
+
+        uint256 endingLiquidatorCollateralBalance = dscEngine.getFromCollateralDepositedMapping(LIQUIDATOR, weth);
+        assertEq(endingLiquidatorCollateralBalance,startingLiquidatorCollateralBalance);
+    }
+
+    function test_Liquidate_DoesNotReduceLiquidatorDscMinted() public liquidationSetup {
+        uint256 startingLiquidatorDSCMintedMapping = dscEngine.getFromDSCMintedMapping(LIQUIDATOR);
+        assertEq(startingLiquidatorDSCMintedMapping, 1000 ether);
+
+        MockV3Aggregator(wethUsdPriceFeed).updateAnswer(20e8);
+        vm.warp(3);
+
+        vm.prank(LIQUIDATOR);
+        dscEngine.liquidate(weth, USER, 1000 ether);
+
+        uint256 endingLiquidatorDSCMintedMapping = dscEngine.getFromDSCMintedMapping(LIQUIDATOR);
+        assertEq(endingLiquidatorDSCMintedMapping,startingLiquidatorDSCMintedMapping);
+    }
+
+    function test_Liquidate_DoesNotChangeLiquidatorHealthFactor() public liquidationSetup {
+        MockV3Aggregator(wethUsdPriceFeed).updateAnswer(20e8);
+        vm.warp(3);
+
+        //The healthfactor after the price update is what expect to remain unchanged during liquidation
+        uint256 startingLiquidatorHealthFactor = dscEngine.getHealthFactor(LIQUIDATOR);
+
+        vm.prank(LIQUIDATOR);
+        dscEngine.liquidate(weth, USER, 1000 ether);
+
+        uint256 endingLiquidatorHealthFactor = dscEngine.getHealthFactor(LIQUIDATOR);
+        assertEq(endingLiquidatorHealthFactor,startingLiquidatorHealthFactor);
+    }
+
+    function test_Liquidate_PaysOutWethToLiquidtor() public liquidationSetup {
+        uint256 startingLiquidatorWethBalance = MockERC20WETH(weth).balanceOf(LIQUIDATOR);
+        //This test is a complete liquidation so liquidator should get All of the balance
+        uint256 userCollateralBalance = dscEngine.getFromCollateralDepositedMapping(USER, weth);
+        MockV3Aggregator(wethUsdPriceFeed).updateAnswer(20e8);
+        vm.warp(3);
+
+        vm.prank(LIQUIDATOR);
+        dscEngine.liquidate(weth, USER, 1000 ether);
+
+        uint256 endingLiquidatorWethBalance = MockERC20WETH(weth).balanceOf(LIQUIDATOR);
+
+        assertEq(endingLiquidatorWethBalance,startingLiquidatorWethBalance + userCollateralBalance);
     }
 }
