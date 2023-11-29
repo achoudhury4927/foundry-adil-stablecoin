@@ -300,7 +300,6 @@ contract DSCEngineTest is Test {
         dscEngine.liquidate(weth, USER, ONETHOUSANDDSC);
     }
 
-    //TODO: Seperate out this giant test
     function test_Liquidate_ReducesCollateralDepositBalanceOfLiquidatee() public liquidationSetup {
         uint256 startingUserCollateralDepositedUsdBalance = dscEngine.getAccountCollateralValue(USER);
         assertEq(startingUserCollateralDepositedUsdBalance,2000 ether); // At this point 1 weth = $2000 so collateral value will be 2000e18 in as usd is retrieved in wei
@@ -334,7 +333,6 @@ contract DSCEngineTest is Test {
         assertEq(endingUserHealthFactor,type(uint256).max);
     }
 
-    //TODO: Seperate out this giant test
     function test_Liquidate_PaysOffLiquidateeDebt() public liquidationSetup {
         uint256 startingUserDSCMintedMapping = dscEngine.getFromDSCMintedMapping(USER);
         assertEq(startingUserDSCMintedMapping, 1000 ether);
