@@ -11,6 +11,7 @@ import {DSCEngine} from "../../src/DSCEngine.sol";
 import {MockV3Aggregator} from "../mocks/MockV3Aggregator.sol";
 import {MockERC20WETH} from "../mocks/MockERC20WETH.sol";
 import {MockERC20WBTC} from "../mocks/MockERC20WBTC.sol";
+import {Handler} from "./Handler.t.sol";
 
 /**
  * @title InvariantsTest
@@ -18,11 +19,12 @@ import {MockERC20WBTC} from "../mocks/MockERC20WBTC.sol";
  * @dev Invariant Tests
  *
  */
-contract OpenInvariantsTest is StdInvariant, Test{
+contract InvariantsTest is StdInvariant, Test {
     DeployDSC deployer;
     DecentralisedStableCoin dsc;
     DSCEngine dscEngine;
     HelperConfig helperConfig;
+    Handler handler;
     address wethUsdPriceFeed;
     address wbtcUsdPriceFeed;
     address weth;
@@ -31,11 +33,12 @@ contract OpenInvariantsTest is StdInvariant, Test{
         deployer = new DeployDSC();
         (dsc, dscEngine, helperConfig) = deployer.run();
         (wethUsdPriceFeed, wbtcUsdPriceFeed, weth, wbtc,) = helperConfig.activeNetworkConfig();
-        targetContract(address(dscEngine));
+        // targetContract(address(dscEngine));
+        handler = new Handler(dscEngine,dsc);
+        targetContract(address(handler));
     }
 
-    //Set to private as code is only for my reference
-    function invariant_ProtocolMustHaveMoreValueThanTotalSupply() private view {
+    function invariant_ProtocolMustHaveMoreValueThanTotalSupply() public view {
         uint256 totalSupply = dsc.totalSupply();
         uint256 totalWethDeposited = MockERC20WETH(weth).balanceOf(address(dscEngine));
         uint256 wethValue = dscEngine.getUsdValue(weth, totalWethDeposited);
