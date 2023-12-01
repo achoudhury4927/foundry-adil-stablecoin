@@ -18,7 +18,7 @@ import {MockERC20WBTC} from "../mocks/MockERC20WBTC.sol";
  * @dev Invariant Tests
  *
  */
-contract InvariantsTest is StdInvariant, Test{
+contract OpenInvariantsTest is StdInvariant, Test{
     DeployDSC deployer;
     DecentralisedStableCoin dsc;
     DSCEngine dscEngine;
@@ -35,5 +35,10 @@ contract InvariantsTest is StdInvariant, Test{
     }
 
     function invariant_ProtocolMustHaveMoreValueThanTotalSupply() public view {
+        uint256 totalSupply = dsc.totalSupply();
+        uint256 totalWethDeposited = MockERC20WETH(weth).balanceOf(address(dscEngine));
+        uint256 wethValue = dscEngine.getUsdValue(weth, totalWethDeposited);
+
+        assert(wethValue >= totalSupply);
     }
 }
