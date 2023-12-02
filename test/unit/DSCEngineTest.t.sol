@@ -65,45 +65,6 @@ contract DSCEngineTest is Test {
         assertEq(dscEngine.getDscAddress(), address(dsc));
     }
 
-    //--------------GetTokenAmountFromUsd Tests--------------//
-
-    function test_GetTokenAmountFromUsd_ReturnsCorrectTokenValue() public {
-        uint256 usdAmount = 2000 ether; //Usd is provided in wei so 1e18 (1 ether) represents 1 usd
-        uint256 expectedWeth = 1 ether; //As the static price from the mock is 1 ETH = $2000 we should get 1 eth as the result
-        uint256 actualWeth = dscEngine.getTokenAmountFromUsd(weth, usdAmount);
-        assertEq(expectedWeth, actualWeth);
-    }
-
-    //--------------GetAccountCollateralValue Tests--------------//
-
-    function test_GetAccountCollateralValue_ReturnsCorrectCollateralValue() public {
-        vm.startPrank(USER);
-        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
-        MockERC20WBTC(wbtc).approve(address(dscEngine), FIVEBITCOIN);
-        dscEngine.depositCollateral(weth, TENETHER);
-        dscEngine.depositCollateral(wbtc, FIVEBITCOIN);
-        vm.stopPrank();
-        uint256 expectedUsd = 25000e18;
-        assertEq(dscEngine.getAccountCollateralValue(USER), expectedUsd);
-    }
-
-    //--------------GetUsdValue Tests--------------//
-
-    function test_GetUsdValue_OfEth() public {
-        uint256 ethAmount = 15e18; //15 eth = 15,000,000,000,000,000,000 gwei
-        uint256 expectedUsd = 30000e18; //15*2000 = 30,000. Base e18 for easy multiplication of eth in gwei format.
-        uint256 actualUsd = dscEngine.getUsdValue(weth, ethAmount);
-        assertEq(expectedUsd, actualUsd);
-    }
-
-    function test_GetUsdValue_OfBtc() public {
-        uint256 btcAmount = 15e18; //15 wbtc = 15,000,000,000,000,000,000 gwei
-        uint256 expectedUsd = 15000e18; //15*1000 = 15,000. Base e18 for easy multiplication of eth in gwei format.
-        uint256 actualUsd = dscEngine.getUsdValue(wbtc, btcAmount);
-        assertEq(expectedUsd, actualUsd);
-    }
-
-
     //Modifier to approve weth for the user, this function does not stop prank
     modifier approveWeth() {
         vm.startPrank(USER);
@@ -409,5 +370,50 @@ contract DSCEngineTest is Test {
         uint256 endingLiquidatorWethBalance = MockERC20WETH(weth).balanceOf(LIQUIDATOR);
 
         assertEq(endingLiquidatorWethBalance,startingLiquidatorWethBalance + userCollateralBalance);
+    }
+
+    //--------------GetTokenAmountFromUsd Tests--------------//
+
+    function test_GetTokenAmountFromUsd_ReturnsCorrectTokenValue() public {
+        uint256 usdAmount = 2000 ether; //Usd is provided in wei so 1e18 (1 ether) represents 1 usd
+        uint256 expectedWeth = 1 ether; //As the static price from the mock is 1 ETH = $2000 we should get 1 eth as the result
+        uint256 actualWeth = dscEngine.getTokenAmountFromUsd(weth, usdAmount);
+        assertEq(expectedWeth, actualWeth);
+    }
+
+    //--------------GetAccountCollateralValue Tests--------------//
+
+    function test_GetAccountCollateralValue_ReturnsCorrectCollateralValue() public {
+        vm.startPrank(USER);
+        MockERC20WETH(weth).approve(address(dscEngine), TENETHER);
+        MockERC20WBTC(wbtc).approve(address(dscEngine), FIVEBITCOIN);
+        dscEngine.depositCollateral(weth, TENETHER);
+        dscEngine.depositCollateral(wbtc, FIVEBITCOIN);
+        vm.stopPrank();
+        uint256 expectedUsd = 25000e18;
+        assertEq(dscEngine.getAccountCollateralValue(USER), expectedUsd);
+    }
+
+    //--------------GetUsdValue Tests--------------//
+
+    function test_GetUsdValue_OfEth() public {
+        uint256 ethAmount = 15e18; //15 eth = 15,000,000,000,000,000,000 gwei
+        uint256 expectedUsd = 30000e18; //15*2000 = 30,000. Base e18 for easy multiplication of eth in gwei format.
+        uint256 actualUsd = dscEngine.getUsdValue(weth, ethAmount);
+        assertEq(expectedUsd, actualUsd);
+    }
+
+    function test_GetUsdValue_OfBtc() public {
+        uint256 btcAmount = 15e18; //15 wbtc = 15,000,000,000,000,000,000 gwei
+        uint256 expectedUsd = 15000e18; //15*1000 = 15,000. Base e18 for easy multiplication of eth in gwei format.
+        uint256 actualUsd = dscEngine.getUsdValue(wbtc, btcAmount);
+        assertEq(expectedUsd, actualUsd);
+    }
+
+    //--------------GetCollateralTokenAddresses Tests--------------//
+    function test_GetCollateralTokenAddresses_ReturnsCorrectAddesses() public {
+        address[] memory collateralTokens = dscEngine.getCollateralTokenAddresses();
+        assertEq(weth, collateralTokens[0]);
+        assertEq(wbtc, collateralTokens[1]);
     }
 }

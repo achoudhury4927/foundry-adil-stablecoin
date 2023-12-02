@@ -25,9 +25,32 @@ contract Handler is Test{
     constructor(DSCEngine _dscEngine, DecentralisedStableCoin _dsc){
         dscEngine = _dscEngine;
         dsc = _dsc;
+        address[] memory collateralTokens = dscEngine.getCollateralTokenAddresses();
+        weth = collateralTokens[0];
+        wbtc = collateralTokens[1];
     }
 
-    function depositCollateral(address collateralSeed, uint256 amountCollateral) public {
-        dscEngine.depositCollateral(collateralSeed,amountCollateral);
+    function depositCollateral(uint256 collateralSeed, uint256 amountCollateral) public {
+        address collateral = _getCollateralFromSeed(collateralSeed);
+        amountCollateral = bound(amountCollateral, 1, type(uint96).max); //If it were uint256 max then any further deposits would revert
+
+        vm.startPrank(msg.sender);
+        if(collateral == weth){
+            MockERC20WETH(collateral).mint(msg.sender, amountCollateral);
+            MockERC20WETH(collateral).approve(address(dscEngine), amountCollateral);
+        } else {
+            MockERC20WBTC(collateral).mint(msg.sender, amountCollateral);
+            MockERC20WBTC(collateral).approve(address(dscEngine), amountCollateral);
+        }
+        dscEngine.depositCollateral(collateral,amountCollateral);
+        vm.stopPrank();
+    }
+
+    //helper
+    function _getCollateralFromSeed(uint256 collateralSeed) public view returns(address){
+        if((collateralSeed % 2) == 0){
+            return weth;
+        }
+        return wbtc;
     }
 }

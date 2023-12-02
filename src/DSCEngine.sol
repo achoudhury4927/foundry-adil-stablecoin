@@ -356,4 +356,8 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
         //To get the wei amount (1 ETH = 1 * 1e18)
         return ((uint256(price) * ADDITIONAL_FEED_PRECISION) * amount) / PRECISION; //Price in 1e18 multiplied by amount, to get 1e18 total, divided by 1e18 to get a dollar amount.
     }
+
+    function getCollateralTokenAddresses() public view returns(address[] memory){
+        return s_collateralTokens;
+    }
 }
