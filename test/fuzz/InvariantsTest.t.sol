@@ -41,8 +41,10 @@ contract InvariantsTest is StdInvariant, Test {
     function invariant_ProtocolMustHaveMoreValueThanTotalSupply() public view {
         uint256 totalSupply = dsc.totalSupply();
         uint256 totalWethDeposited = MockERC20WETH(weth).balanceOf(address(dscEngine));
+        uint256 totalWbtcDeposited = MockERC20WBTC(wbtc).balanceOf(address(dscEngine));
         uint256 wethValue = dscEngine.getUsdValue(weth, totalWethDeposited);
+        uint256 wbtcValue = dscEngine.getUsdValue(wbtc, totalWbtcDeposited);
 
-        assert(wethValue >= totalSupply);
+        assert(wethValue + wbtcValue >= totalSupply);
     }
 }

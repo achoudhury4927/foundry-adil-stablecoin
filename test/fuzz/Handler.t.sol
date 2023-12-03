@@ -46,6 +46,19 @@ contract Handler is Test{
         vm.stopPrank();
     }
 
+    function redeemCollateral(uint256 collateralSeed, uint256 amountCollateral) public {
+        address collateral = _getCollateralFromSeed(collateralSeed);
+        uint256 maxCollateralBalance;
+        if(collateral == weth){
+            maxCollateralBalance = dscEngine.getFromCollateralDepositedMapping(msg.sender, weth);
+        } else {
+            maxCollateralBalance = dscEngine.getFromCollateralDepositedMapping(msg.sender, wbtc);
+        }
+        amountCollateral = bound(amountCollateral,0,maxCollateralBalance);
+        if (amountCollateral == 0) { return; }
+        dscEngine.redeemCollateral(collateral, amountCollateral);
+    }
+
     //helper
     function _getCollateralFromSeed(uint256 collateralSeed) public view returns(address){
         if((collateralSeed % 2) == 0){

@@ -268,6 +268,13 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
     function _redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral, address from, address to)
         private
     {
+        console2.log("Trying to redeem collateral of: ");
+        console2.log(amountCollateral);
+        console2.log("Where user has:");
+        console2.log(s_collateralDeposited[from][tokenCollateralAddress]);
+        console2.log("And has minted:");
+        console2.log(s_DscMinted[from]);
+
         s_collateralDeposited[from][tokenCollateralAddress] -= amountCollateral;
         emit CollatedRedeemed(from, to, tokenCollateralAddress, amountCollateral);
 
