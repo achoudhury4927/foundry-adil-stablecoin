@@ -304,8 +304,8 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
      * @return totalDscMinted The amount of dsc the account currently has minted
      * @return collateralValueInUsd The value of the collateral the account currently has
      */
-    function _getAccountInformation(address user)
-        private
+    function getAccountInformation(address user)
+        public
         view
         returns (uint256 totalDscMinted, uint256 collateralValueInUsd)
     {
@@ -318,7 +318,7 @@ contract DSCEngine is ReentrancyGuard, ITestDSCEngine {
      * @param user address to check health factor of
      */
     function _healthFactor(address user) private view returns (uint256) {
-        (uint256 totalDscMinted, uint256 collateralValueInUsd) = _getAccountInformation(user);
+        (uint256 totalDscMinted, uint256 collateralValueInUsd) = getAccountInformation(user);
         if (totalDscMinted == 0) return type(uint256).max;
         uint256 collateralAdjustedForThreshold = (collateralValueInUsd * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION;
         return (collateralAdjustedForThreshold * PRECISION) / totalDscMinted;

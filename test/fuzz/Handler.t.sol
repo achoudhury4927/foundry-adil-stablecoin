@@ -21,6 +21,7 @@ contract Handler is Test{
     address wbtcUsdPriceFeed;
     address weth;
     address wbtc;
+    address[] public usersWithCollateralDeposited;
 
     constructor(DSCEngine _dscEngine, DecentralisedStableCoin _dsc){
         dscEngine = _dscEngine;
@@ -28,6 +29,20 @@ contract Handler is Test{
         address[] memory collateralTokens = dscEngine.getCollateralTokenAddresses();
         weth = collateralTokens[0];
         wbtc = collateralTokens[1];
+    }
+
+    function mintDsc(uint256 amount, uint256 addressSeed) public {
+        if(usersWithCollateralDeposited.length == 0) return;
+        address sender = usersWithCollateralDeposited[addressSeed%usersWithCollateralDeposited.length];
+        amount = bound(amount,1,type(uint96).max);
+        (uint256 totalDscMinted, uint256 collateralValueInUsd) = dscEngine.getAccountInformation(msg.sender);
+        int256 maxDscToMint = (int256(collateralValueInUsd) /2) - int256(totalDscMinted);
+        if(maxDscToMint < 0) return;
+        amount = bound(amount,0,uint256(maxDscToMint));
+        if(amount == 0) return;
+        vm.startPrank(sender);
+        dscEngine.mintDsc(amount);
+        vm.stopPrank();
     }
 
     function depositCollateral(uint256 collateralSeed, uint256 amountCollateral) public {
@@ -44,6 +59,7 @@ contract Handler is Test{
         }
         dscEngine.depositCollateral(collateral,amountCollateral);
         vm.stopPrank();
+        usersWithCollateralDeposited.push(msg.sender);
     }
 
     function redeemCollateral(uint256 collateralSeed, uint256 amountCollateral) public {
