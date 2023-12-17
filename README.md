@@ -28,7 +28,6 @@
 <!-- PROJECT LOGO -->
 <br />
 
-
 <h3 align="center">Exogenous Stablecoin</h3>
 
   <p align="center">
@@ -127,16 +126,6 @@ You will need foundry to install the packages and run tests. You can find out mo
    ```sh
    make test
    ```
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-<!-- USAGE EXAMPLES -->
-
-## Usage
-
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
-
-_For more examples, please refer to the [Documentation](https://example.com)_
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
