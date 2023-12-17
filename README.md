@@ -78,12 +78,6 @@
 
 ## About The Project
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
-
-Here's a blank template to get started: To avoid retyping too much info. Do a search and replace with your text editor for the following: `achoudhury4927`, `foundry-adil-stablecoin`, `0xAdilc`, `linkedin_username`, `email_client`, `email`, `Exogenous Stablecoin`, `This is a Decentralised Algorithmic Exogenous Stablecoin using chainlink price feeds to ensure coins can only be minted with enough collateral`
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 ### Built With
 
 - Solidity
@@ -156,20 +150,25 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 - [x] ERC20 Stablecoin
   - [x] Unit Tests
   - [ ] Integration Tests
-- [ ] Deposit Collateral
-  - [ ] Unit Tests
+- [x] Deposit Collateral
+  - [x] Unit Tests
+  - [x] Fuzz Tests
   - [ ] Integration Tests
-- [ ] Chainlink Oracle Pricefeeds
-  - [ ] Unit Tests
+- [x] Chainlink Oracle Pricefeeds
+  - [x] Unit Tests
+  - [x] Fuzz Tests
   - [ ] Integration Tests
-- [ ] Mint
-  - [ ] Unit Tests
+- [x] Mint
+  - [x] Unit Tests
+  - [x] Fuzz Tests
   - [ ] Integration Tests
-- [ ] Burn
-  - [ ] Unit Tests
+- [x] Burn
+  - [x] Unit Tests
+  - [ ] Fuzz Tests
   - [ ] Integration Tests
-- [ ] Liquidations
-  - [ ] Unit Tests
+- [x] Liquidations
+  - [x] Unit Tests
+  - [ ] Fuzz Tests
   - [ ] Integration Tests
 - [ ] Deploy Engine Script
 - [ ] Deploy to Base L2
@@ -210,16 +209,6 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 Adil Choudhury - [@0xAdilc](https://twitter.com/0xAdilc) - contact@adilc.me
 
 Project Link: [https://github.com/achoudhury4927/foundry-adil-stablecoin](https://github.com/achoudhury4927/foundry-adil-stablecoin)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-<!-- ACKNOWLEDGMENTS -->
-
-## Acknowledgments
-
-- []()
-- []()
-- []()
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
