@@ -27,10 +27,7 @@
 
 <!-- PROJECT LOGO -->
 <br />
-<div align="center">
-  <a href="https://github.com/achoudhury4927/foundry-adil-stablecoin">
-    <img src="images/logo.png" alt="Logo" width="80" height="80">
-  </a>
+
 
 <h3 align="center">Exogenous Stablecoin</h3>
 
